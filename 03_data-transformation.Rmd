@@ -108,7 +108,7 @@ flights |>
 ```
 
 3. Sort `flights` to find the fastest flights. (Hint: Try including a math calculation inside of your function.)
-```{r}
+```{r ex-3-2-3}
 flights |> 
   arrange(distance/air_time)
 ```
@@ -205,3 +205,126 @@ flights |>
   summarise(avg_arr_delay = mean(arr_delay, na.rm = TRUE), .groups = "drop")
 ```
 
+## Exercises
+1. Which carrier has the worst average delays? Challenge: can you disentangle the effects of bad airports vs. bad carriers? Why/why not? (Hint: think about `flights |> group_by(carrier, dest) |> summarize(n())`).
+```{r ex-3-5-1-1}
+flights |> 
+  group_by(carrier) |> 
+  summarise(avg_arr_delay = mean(arr_delay, na.rm = TRUE)) |> 
+  arrange(desc(avg_arr_delay))
+```
+
+```{r ex-3-5-1-2}
+flights |> 
+  group_by(carrier, dest) |> 
+  summarise(n = n())
+```
+
+2. Find the flights that are most delayed upon departure from each destination.
+```{r ex-3-5-2}
+flights |> 
+  slice_max(dep_delay, by = dest, na_rm = TRUE) |> 
+  arrange(dest) |> 
+  select(dest, carrier, flight, tailnum, origin, dest, dep_delay)
+```
+
+3. How do delays vary over the course of the day? Illustrate your answer with a plot.
+```{r ex-3-5-3}
+avg_dep_delay_by_hour <- 
+  flights |> 
+  group_by(hour) |> 
+  summarise(avg_dep_delay = mean(dep_delay, na.rm = TRUE))
+
+avg_dep_delay_by_hour |> 
+  ggplot(
+    aes(
+     x = hour,
+     y = avg_dep_delay
+    )
+  ) +
+  geom_smooth()
+```
+
+During the course of a day, the average departure delay increases until around 7pm then declines until the end of the day.
+
+4. What happens if you supply a negative n to `slice_min()` and friends?
+```{r ex-3-5-4}
+flights |> 
+  slice_min(dep_delay, n = -5) |> 
+  select(hour, dep_delay)
+```
+
+Supplying a negative number simply arranges the tibble in descending order without filtering the rows.
+
+5. Explain what `count()` does in terms of the dplyr verbs you just learned. What does the `sort` argument to `count()` do?
+```{r ex-3-5-5}
+flights |> 
+  count(origin, sort = TRUE)
+```
+
+Using the `count()` function is the equivalent of grouping and then counting each group. The `sort` argument arranges the output in descending order of count.
+
+6. Suppose we have the following tiny data frame:
+```{r ex-3-5-6}
+df <- tibble(
+  x = 1:5,
+  y = c("a", "b", "a", "a", "b"),
+  z = c("K", "K", "L", "L", "K")
+)
+```
+
+- Write down what you think the output will look like, then check if you were correct, and describe what group_by() does.
+```{r ex-3-5-6-1}
+df |>
+  group_by(y)
+```
+
+This code will return an unaltered tibble but behind the scenes R will be ready to perform the next operation on groups according to `y`.
+
+- Write down what you think the output will look like, then check if you were correct, and describe what `arrange()` does. Also, comment on how it’s different from the `group_by()` in part (a).
+```{r ex-3-5-6-2}
+df |>
+  arrange(y)
+```
+
+This will rearrange the rows in `df` in ascending order of `y`.
+
+- Write down what you think the output will look like, then check if you were correct, and describe what the pipeline does.
+```{r ex-3-5-6-3}
+df |>
+  group_by(y) |>
+  summarize(mean_x = mean(x))
+```
+
+For every group of `y` we will see the mean of `x`.
+
+- Write down what you think the output will look like, then check if you were correct, and describe what the pipeline does. Then, comment on what the message says.
+```{r ex-3-5-6-4}
+df |>
+  group_by(y, z) |>
+  summarize(mean_x = mean(x))
+```
+
+It will group the output by `y` then `z` and for each group it will give the mean of `x`.
+
+- Write down what you think the output will look like, then check if you were correct, and describe what the pipeline does. How is the output different from the one in part (d)?
+```{r ex-3-5-6-5}
+df |>
+  group_by(y, z) |>
+  summarize(mean_x = mean(x), .groups = "drop")
+```
+
+This does the same as above but the groups are dropped afterwards.
+
+- Write down what you think the outputs will look like, then check if you were correct, and describe what each pipeline does. How are the outputs of the two pipelines different?
+```{r ex-3-5-6-6}
+df |>
+  group_by(y, z) |>
+  summarize(mean_x = mean(x))
+
+df |>
+  group_by(y, z) |>
+  mutate(mean_x = mean(x))
+```
+
+The first output will include one row per group. The second will include one row per observation but the aggregated measure will be duplicated for each row in the group.
